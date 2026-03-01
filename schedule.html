@@ -1164,7 +1164,6 @@ function visibleEvents() {
 //  RENDER HELPERS
 // ════════════════════════════════════════════════════════
 function eventColor(ev) {
-  if (ev.assignee && ASSIGNEES[ev.assignee]) return ASSIGNEES[ev.assignee].color;
   return (EVENT_TYPES[ev.type] || EVENT_TYPES.content).color;
 }
 
