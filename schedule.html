@@ -1251,8 +1251,8 @@ function renderMonth() {
     dayEvs.forEach(ev => cell.appendChild(makeChip(ev)));
 
     // Click on empty area
-    cell.addEventListener('click', () => {
-      if (window.event && window.event.target.closest('.event-chip')) return;
+    cell.addEventListener('click', (e) => {
+      if (e.target.closest('.event-chip')) return;
       openAddModal(ymd);
     });
 
