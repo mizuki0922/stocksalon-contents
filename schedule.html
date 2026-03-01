@@ -1176,13 +1176,17 @@ function makeChip(ev) {
   div.className = 'event-chip' + (ev.completed ? ' completed' : '');
   div.style.background = eventColor(ev);
   div.dataset.evId = ev.id;
+  if (ev.assignee && ASSIGNEES[ev.assignee]) {
+    div.style.borderLeft = `4px solid ${ASSIGNEES[ev.assignee].color}`;
+  }
 
   let html = '';
   if (ev.completed) html += `<span style="flex-shrink:0;">✓</span>`;
   if (ev.startTime) html += `<span class="chip-time">${ev.startTime}</span>`;
   html += `<span class="chip-title">${esc(ev.title)}</span>`;
   if (ev.assignee && ASSIGNEES[ev.assignee]) {
-    html += ` <span style="font-size:0.62rem;background:rgba(255,255,255,0.25);border-radius:8px;padding:0 4px;">${ASSIGNEES[ev.assignee].label}</span>`;
+    const ac = ASSIGNEES[ev.assignee].color;
+    html += ` <span style="font-size:0.62rem;background:#fff;border-radius:8px;padding:0 4px;color:${ac};font-weight:700;">${ASSIGNEES[ev.assignee].label}</span>`;
   }
   if (ev.type === 'video' && ev.status) {
     const cls = `status-${ev.status}`;
