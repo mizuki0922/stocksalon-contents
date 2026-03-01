@@ -746,12 +746,107 @@
       vertical-align: middle;
       title: "Google Calendar 同期済み";
     }
+
+    /* ── Overdue ── */
+    .event-chip.overdue {
+      outline: 1.5px solid rgba(239,68,68,0.85);
+      outline-offset: -1px;
+      opacity: 0.8;
+    }
+
+    /* ── List View ── */
+    #list-view {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow: auto;
+      max-height: calc(100vh - 110px);
+    }
+    .list-date-header {
+      padding: 0.4rem 1rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .list-date-header.today-header { background: #dbeafe; color: var(--primary); }
+    .list-event-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.45rem 1rem;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .list-event-row:hover { background: var(--bg); }
+    .list-event-color { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .list-event-info { flex: 1; min-width: 0; }
+    .list-event-title { font-size: 0.88rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .list-event-title.done-title { text-decoration: line-through; color: var(--muted); }
+    .list-event-meta { font-size: 0.74rem; color: var(--muted); }
+    .list-event-badges { display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0; }
+    .list-assignee-badge { font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 8px; font-weight: 700; color: #fff; }
+
+    /* ── Toggle-all button ── */
+    .toggle-all-btn {
+      font-size: 0.7rem;
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      padding: 0;
+      margin-bottom: 0.4rem;
+      display: block;
+    }
+    .toggle-all-btn:hover { text-decoration: underline; }
+
+    /* ── Mobile hamburger ── */
+    #btn-menu {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.4rem;
+      padding: 0.2rem 0.4rem;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+    #sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 90;
+    }
+    #sidebar-overlay.open { display: block; }
+
+    @media (max-width: 700px) {
+      #btn-menu { display: block; }
+      #sidebar {
+        position: fixed;
+        left: -240px;
+        top: 57px;
+        height: calc(100vh - 57px);
+        z-index: 95;
+        transition: left 0.25s ease;
+        box-shadow: var(--shadow-lg);
+      }
+      #sidebar.open { left: 0; }
+      #calendar-wrap { width: 100%; }
+    }
   </style>
 </head>
 <body>
 
 <!-- ===== Header ===== -->
 <header id="app-header">
+  <button id="btn-menu" title="メニュー">&#9776;</button>
   <h1>株コンパス<span>スケジュール</span></h1>
   <div class="header-nav">
     <button class="nav-btn" id="btn-prev">&#8592;</button>
@@ -761,6 +856,7 @@
     <div class="view-toggle" style="margin-left:0.5rem;">
       <button id="view-month" class="active">月</button>
       <button id="view-week">週</button>
+      <button id="view-list">リスト</button>
     </div>
   </div>
   <div class="header-actions">
@@ -800,6 +896,12 @@
       </div>
     </div>
     <div class="sidebar-section">
+      <h3>表示オプション</h3>
+      <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.82rem;cursor:pointer;">
+        <input type="checkbox" id="show-completed" checked> 完了済みを表示
+      </label>
+    </div>
+    <div class="sidebar-section">
       <h3>ミニカレンダー</h3>
       <div class="mini-calendar">
         <div class="mini-cal-header">
@@ -825,6 +927,8 @@
       <div class="week-header" id="week-header"></div>
       <div class="week-body" id="week-body"></div>
     </div>
+    <!-- List View -->
+    <div id="list-view" class="hidden"></div>
   </main>
 </div>
 
@@ -986,6 +1090,9 @@
   </div>
 </div>
 
+<!-- ===== Sidebar Overlay (mobile) ===== -->
+<div id="sidebar-overlay"></div>
+
 <!-- ===== Toast Container ===== -->
 <div id="toast-container"></div>
 
@@ -1025,6 +1132,7 @@ let state = {
   filters: { live: true, content: true, shift: true, newsletter: true, video: true },
   videoFilters: { todo: true, inprogress: true, done: true },
   assigneeFilters: { nonaka: true, kotani: true, sakai: true, ai: true },
+  showCompleted: true,
   selectedDate: null,
   config: { clientId: '', calendarId: 'azuchan553@gmail.com', syncMonths: 3 },
   gapi: { loaded: false, signed: false, tokenClient: null },
@@ -1160,6 +1268,7 @@ function visibleEvents() {
     if (!state.filters[e.type]) return false;
     if (e.type === 'video' && e.status && !state.videoFilters[e.status]) return false;
     if (e.assignee && !state.assigneeFilters[e.assignee]) return false;
+    if (!state.showCompleted && e.completed) return false;
     return true;
   });
 }
@@ -1179,6 +1288,8 @@ function makeChip(ev) {
   if (ev.assignee && ASSIGNEES[ev.assignee]) {
     div.style.borderLeft = `4px solid ${ASSIGNEES[ev.assignee].color}`;
   }
+  const todayYMD = toYMD(state.today);
+  if (!ev.completed && ev.date < todayYMD) div.classList.add('overdue');
 
   let html = '';
   if (ev.completed) html += `<span style="flex-shrink:0;">✓</span>`;
@@ -1257,11 +1368,11 @@ function renderMonth() {
     const dayEvs = (evMap[ymd] || []).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
     dayEvs.forEach(ev => cell.appendChild(makeChip(ev)));
 
-    // Click: chip → edit, empty → add
+    // Click: chip → edit, empty → day popup
     cell.addEventListener('click', (e) => {
       const chip = e.target.closest('.event-chip');
       if (chip) { openEditModal(chip.dataset.evId); return; }
-      openAddModal(ymd);
+      showDayPopup(ymd, e);
     });
 
     grid.appendChild(cell);
@@ -1365,6 +1476,12 @@ function renderWeek() {
 
     body.appendChild(col);
   });
+
+  // Auto-scroll to current hour
+  setTimeout(() => {
+    const h = new Date().getHours();
+    document.getElementById('week-body').scrollTop = Math.max(0, h * 48 - 120);
+  }, 0);
 }
 
 // ════════════════════════════════════════════════════════
@@ -1411,6 +1528,15 @@ function renderMini() {
 function renderLegend() {
   const list = document.getElementById('legend-list');
   list.innerHTML = '';
+  const allOn = Object.values(state.filters).every(v => v);
+  const btn = document.createElement('button');
+  btn.className = 'toggle-all-btn';
+  btn.textContent = allOn ? '全て OFF' : '全て ON';
+  btn.addEventListener('click', () => {
+    Object.keys(state.filters).forEach(k => state.filters[k] = !allOn);
+    renderLegend(); renderCalendar();
+  });
+  list.appendChild(btn);
   Object.entries(EVENT_TYPES).forEach(([key, info]) => {
     const item = document.createElement('div');
     item.className = 'legend-item' + (state.filters[key] ? '' : ' inactive');
@@ -1430,6 +1556,15 @@ function renderLegend() {
 function renderAssigneeLegend() {
   const list = document.getElementById('assignee-legend-list');
   list.innerHTML = '';
+  const allOn = Object.values(state.assigneeFilters).every(v => v);
+  const btn = document.createElement('button');
+  btn.className = 'toggle-all-btn';
+  btn.textContent = allOn ? '全て OFF' : '全て ON';
+  btn.addEventListener('click', () => {
+    Object.keys(state.assigneeFilters).forEach(k => state.assigneeFilters[k] = !allOn);
+    renderAssigneeLegend(); renderCalendar();
+  });
+  list.appendChild(btn);
   Object.entries(ASSIGNEES).forEach(([key, info]) => {
     const item = document.createElement('div');
     item.className = 'legend-item' + (state.assigneeFilters[key] ? '' : ' inactive');
@@ -1448,7 +1583,10 @@ function renderAssigneeLegend() {
 // ════════════════════════════════════════════════════════
 function updatePeriodLabel() {
   const el = document.getElementById('current-period');
-  if (state.view === 'month') {
+  if (state.view === 'list') {
+    el.textContent = '全イベント一覧';
+    return;
+  } else if (state.view === 'month') {
     el.textContent = `${state.current.getFullYear()}年${state.current.getMonth() + 1}月`;
   } else {
     const ws = startOfWeek(state.current);
@@ -1469,9 +1607,85 @@ function renderCalendar() {
   renderMini();
   if (state.view === 'month') {
     renderMonth();
-  } else {
+  } else if (state.view === 'week') {
     renderWeek();
+  } else {
+    renderList();
   }
+}
+
+// ════════════════════════════════════════════════════════
+//  LIST VIEW
+// ════════════════════════════════════════════════════════
+function renderList() {
+  const container = document.getElementById('list-view');
+  container.innerHTML = '';
+  const todayYMD = toYMD(state.today);
+  const vis = visibleEvents().sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return (a.startTime || '').localeCompare(b.startTime || '');
+  });
+  if (vis.length === 0) {
+    container.innerHTML = '<p style="text-align:center;padding:2rem;color:var(--muted);">表示するイベントがありません</p>';
+    return;
+  }
+  let currentDate = null;
+  vis.forEach(ev => {
+    if (ev.date !== currentDate) {
+      currentDate = ev.date;
+      const header = document.createElement('div');
+      header.className = 'list-date-header' + (ev.date === todayYMD ? ' today-header' : '');
+      header.textContent = formatJa(parseYMD(ev.date));
+      container.appendChild(header);
+    }
+    const row = document.createElement('div');
+    row.className = 'list-event-row';
+
+    const dot = document.createElement('div');
+    dot.className = 'list-event-color';
+    dot.style.background = eventColor(ev);
+    if (ev.assignee && ASSIGNEES[ev.assignee]) {
+      dot.style.outline = `2px solid ${ASSIGNEES[ev.assignee].color}`;
+      dot.style.outlineOffset = '2px';
+    }
+
+    const info = document.createElement('div');
+    info.className = 'list-event-info';
+    const title = document.createElement('div');
+    title.className = 'list-event-title' + (ev.completed ? ' done-title' : '');
+    title.textContent = (ev.completed ? '✓ ' : '') + ev.title;
+    const meta = document.createElement('div');
+    meta.className = 'list-event-meta';
+    const parts = [];
+    if (ev.startTime) parts.push(ev.startTime + (ev.endTime ? '〜' + ev.endTime : ''));
+    parts.push(EVENT_TYPES[ev.type]?.label || ev.type);
+    meta.textContent = parts.join(' · ');
+    info.appendChild(title);
+    info.appendChild(meta);
+
+    const badges = document.createElement('div');
+    badges.className = 'list-event-badges';
+    if (ev.assignee && ASSIGNEES[ev.assignee]) {
+      const b = document.createElement('span');
+      b.className = 'list-assignee-badge';
+      b.style.background = ASSIGNEES[ev.assignee].color;
+      b.textContent = ASSIGNEES[ev.assignee].label;
+      badges.appendChild(b);
+    }
+    if (ev.type === 'video' && ev.status) {
+      const sb = document.createElement('span');
+      sb.className = `status-badge status-${ev.status}`;
+      sb.style.fontSize = '0.7rem';
+      sb.textContent = STATUS_LABELS[ev.status];
+      badges.appendChild(sb);
+    }
+
+    row.appendChild(dot);
+    row.appendChild(info);
+    row.appendChild(badges);
+    row.addEventListener('click', () => openEditModal(ev.id));
+    container.appendChild(row);
+  });
 }
 
 // ════════════════════════════════════════════════════════
@@ -1931,21 +2145,33 @@ function bindEvents() {
   document.getElementById('btn-next').addEventListener('click', () => navigate(1));
   document.getElementById('btn-today').addEventListener('click', goToday);
 
-  // View toggle
-  document.getElementById('view-month').addEventListener('click', () => {
-    state.view = 'month';
-    document.getElementById('view-month').classList.add('active');
-    document.getElementById('view-week').classList.remove('active');
-    document.getElementById('month-view').classList.remove('hidden');
-    document.getElementById('week-view').classList.add('hidden');
+  // View toggle helper
+  function switchView(view) {
+    state.view = view;
+    ['view-month','view-week','view-list'].forEach(id => document.getElementById(id).classList.remove('active'));
+    document.getElementById('view-' + view).classList.add('active');
+    document.getElementById('month-view').classList.toggle('hidden', view !== 'month');
+    document.getElementById('week-view').classList.toggle('hidden', view !== 'week');
+    document.getElementById('list-view').classList.toggle('hidden', view !== 'list');
     renderCalendar();
+  }
+  document.getElementById('view-month').addEventListener('click', () => switchView('month'));
+  document.getElementById('view-week').addEventListener('click', () => switchView('week'));
+  document.getElementById('view-list').addEventListener('click', () => switchView('list'));
+
+  // Mobile sidebar
+  document.getElementById('btn-menu').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebar-overlay').classList.toggle('open');
   });
-  document.getElementById('view-week').addEventListener('click', () => {
-    state.view = 'week';
-    document.getElementById('view-week').classList.add('active');
-    document.getElementById('view-month').classList.remove('active');
-    document.getElementById('week-view').classList.remove('hidden');
-    document.getElementById('month-view').classList.add('hidden');
+  document.getElementById('sidebar-overlay').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  });
+
+  // Show completed filter
+  document.getElementById('show-completed').addEventListener('change', (e) => {
+    state.showCompleted = e.target.checked;
     renderCalendar();
   });
 
