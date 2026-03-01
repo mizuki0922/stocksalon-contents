@@ -1368,11 +1368,11 @@ function renderMonth() {
     const dayEvs = (evMap[ymd] || []).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
     dayEvs.forEach(ev => cell.appendChild(makeChip(ev)));
 
-    // Click: chip → edit, empty → day popup
+    // Click: chip → edit, empty → add
     cell.addEventListener('click', (e) => {
       const chip = e.target.closest('.event-chip');
       if (chip) { openEditModal(chip.dataset.evId); return; }
-      showDayPopup(ymd, e);
+      openAddModal(ymd);
     });
 
     grid.appendChild(cell);
