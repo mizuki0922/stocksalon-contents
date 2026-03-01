@@ -895,6 +895,8 @@
           <button type="button" data-value="" class="bg-active">なし</button>
           <button type="button" data-value="nonaka">野中</button>
           <button type="button" data-value="kotani">小谷</button>
+          <button type="button" data-value="sakai">酒井</button>
+          <button type="button" data-value="ai">あい</button>
         </div>
         <input type="hidden" id="ev-assignee" value="">
       </div>
@@ -1008,6 +1010,8 @@ const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/
 const ASSIGNEES = {
   nonaka: { label: '野中', color: '#0891b2' },  // シアン
   kotani: { label: '小谷', color: '#be185d' },  // ローズ
+  sakai:  { label: '酒井', color: '#16a34a' },  // 緑
+  ai:     { label: 'あい', color: '#ea580c' },  // オレンジ
 };
 
 // ════════════════════════════════════════════════════════
@@ -1020,7 +1024,7 @@ let state = {
   events: [],
   filters: { live: true, content: true, shift: true, newsletter: true, video: true },
   videoFilters: { todo: true, inprogress: true, done: true },
-  assigneeFilters: { nonaka: true, kotani: true },
+  assigneeFilters: { nonaka: true, kotani: true, sakai: true, ai: true },
   selectedDate: null,
   config: { clientId: '', calendarId: 'azuchan553@gmail.com', syncMonths: 3 },
   gapi: { loaded: false, signed: false, tokenClient: null },
