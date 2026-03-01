@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>株コンパスサロン スケジュール管理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root {
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --text: #1a1a2e;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger: #ef4444;
+      --c-live: #e74c3c;
+      --c-content: #3498db;
+      --c-shift: #2ecc71;
+      --c-newsletter: #9b59b6;
+      --c-video: #f39c12;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 10px 25px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    #app-header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    #app-header h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    #app-header h1 span { color: var(--primary); }
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+      justify-content: center;
+    }
+    .nav-btn {
+      background: none;
+      border: 1px solid var(--border-dark);
+      border-radius: var(--radius);
+      padding: 0.4rem 0.75rem;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--text);
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .nav-btn:hover { background: var(--bg); border-color: var(--primary); color: var(--primary); }
+    #current-period {
+      font-size: 1rem;
+      font-weight: 700;
+      min-width: 160px;
+      text-align: center;
+      color: var(--text);
+    }
+    .view-toggle {
+      display: flex;
+      border: 1px solid var(--border-dark);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .view-toggle button {
+      background: none;
+      border: none;
+      padding: 0.4rem 0.9rem;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+    .view-toggle button.active {
+      background: var(--primary);
+      color: #fff;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn {
+      padding: 0.45rem 1rem;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--card); border: 1px solid var(--border-dark); color: var(--text); }
+    .btn-secondary:hover { background: var(--bg); border-color: var(--primary); color: var(--primary); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-ghost { background: none; border: none; color: var(--muted); font-size: 0.85rem; padding: 0.45rem 0.75rem; }
+    .btn-ghost:hover { color: var(--text); }
+    #sync-status {
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    #sync-status.syncing { color: var(--primary); }
+    #sync-status.synced { color: #16a34a; }
+    #sync-status.error { color: var(--danger); }
+
+    /* ── Layout ── */
+    #app-body {
+      display: flex;
+      height: calc(100vh - 57px);
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      padding: 1rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .sidebar-section h3 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.83rem;
+      margin-bottom: 0.35rem;
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 0.2rem 0.3rem;
+      transition: background 0.1s;
+      user-select: none;
+    }
+    .legend-item:hover { background: var(--bg); }
+    .legend-item.inactive { opacity: 0.4; }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.83rem;
+      margin-bottom: 0.35rem;
+    }
+    .mini-calendar {
+      /* mini month nav */
+    }
+    .mini-cal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .mini-cal-header span {
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .mini-cal-header button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+    }
+    .mini-cal-header button:hover { background: var(--bg); }
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      font-size: 0.75rem;
+      text-align: center;
+    }
+    .mini-grid .day-name { color: var(--muted); font-weight: 600; padding: 2px 0; }
+    .mini-grid .day-num {
+      padding: 3px 2px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .mini-grid .day-num:hover { background: var(--bg); }
+    .mini-grid .day-num.other-month { color: #c0c0c0; }
+    .mini-grid .day-num.today { background: var(--primary); color: #fff; font-weight: 700; }
+    .mini-grid .day-num.selected { background: #dbeafe; color: var(--primary); font-weight: 700; }
+    .mini-grid .day-num.has-event::after {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--primary);
+      margin: 1px auto 0;
+    }
+
+    /* ── Main Calendar ── */
+    #calendar-wrap {
+      flex: 1;
+      overflow: auto;
+      padding: 1rem;
+    }
+
+    /* Month View */
+    #month-view {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .month-header-row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      border-bottom: 1px solid var(--border);
+    }
+    .month-header-row .day-header {
+      padding: 0.5rem;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .month-header-row .day-header.weekend { color: #e74c3c; }
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+    .month-day {
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      min-height: 110px;
+      padding: 0.3rem;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .month-day:nth-child(7n) { border-right: none; }
+    .month-day:hover { background: #fafbff; }
+    .month-day.other-month { background: #fafafa; }
+    .month-day.other-month .day-num { color: #c0c0c0; }
+    .month-day.today .day-num {
+      background: var(--primary);
+      color: #fff;
+    }
+    .month-day.selected { background: #eff6ff; }
+    .day-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .day-weekend .day-num { color: #e74c3c; }
+    .today .day-num { color: #fff !important; }
+    .event-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      margin-bottom: 2px;
+      cursor: pointer;
+      color: #fff;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      line-height: 1.4;
+      transition: opacity 0.1s, filter 0.1s;
+    }
+    .event-chip:hover { opacity: 0.85; filter: brightness(0.95); }
+    .event-chip.completed {
+      background: #9ca3af !important;
+      opacity: 0.65;
+    }
+    .event-chip.completed .chip-title { text-decoration: line-through; }
+    .event-chip .chip-time {
+      font-size: 0.65rem;
+      opacity: 0.9;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .event-chip .chip-title { overflow: hidden; text-overflow: ellipsis; }
+    .more-events {
+      font-size: 0.7rem;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+    }
+    .more-events:hover { background: var(--bg); color: var(--primary); }
+
+    /* Week View */
+    #week-view {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .week-header {
+      display: grid;
+      grid-template-columns: 56px repeat(7, 1fr);
+      border-bottom: 2px solid var(--border);
+    }
+    .week-header .wh-gutter { background: var(--bg); }
+    .week-header .wh-day {
+      padding: 0.5rem 0.25rem;
+      text-align: center;
+      border-left: 1px solid var(--border);
+      font-size: 0.8rem;
+    }
+    .week-header .wh-day .wh-dow {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .week-header .wh-day .wh-date {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .week-header .wh-day.today .wh-date {
+      background: var(--primary);
+      color: #fff;
+      display: inline-flex;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      align-items: center;
+      justify-content: center;
+    }
+    .week-header .wh-day.weekend .wh-dow { color: #e74c3c; }
+    .week-header .wh-day.weekend .wh-date { color: #e74c3c; }
+    .week-body {
+      display: grid;
+      grid-template-columns: 56px repeat(7, 1fr);
+      overflow-y: auto;
+      flex: 1;
+      max-height: calc(100vh - 160px);
+    }
+    .week-time-col {
+      background: var(--bg);
+      border-right: 1px solid var(--border);
+    }
+    .week-time-slot {
+      height: 48px;
+      border-bottom: 1px solid var(--border);
+      padding-right: 0.4rem;
+      text-align: right;
+      font-size: 0.68rem;
+      color: var(--muted);
+      padding-top: 2px;
+    }
+    .week-day-col {
+      border-left: 1px solid var(--border);
+      position: relative;
+    }
+    .week-hour-row {
+      height: 48px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .week-hour-row.half-hour {
+      border-bottom: 1px dashed var(--border);
+    }
+    .week-event {
+      position: absolute;
+      left: 2px;
+      right: 2px;
+      border-radius: 4px;
+      padding: 2px 5px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: #fff;
+      cursor: pointer;
+      overflow: hidden;
+      z-index: 2;
+      transition: opacity 0.1s;
+    }
+    .week-event:hover { opacity: 0.85; }
+    .week-allday-row {
+      display: grid;
+      grid-template-columns: 56px repeat(7, 1fr);
+      border-bottom: 1px solid var(--border-dark);
+      min-height: 32px;
+    }
+    .week-allday-gutter {
+      background: var(--bg);
+      font-size: 0.65rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid var(--border);
+    }
+    .week-allday-cell {
+      border-left: 1px solid var(--border);
+      padding: 2px;
+    }
+
+    /* ── Status Badges ── */
+    .status-badge {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border-radius: 10px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .status-todo { background: #e2e8f0; color: #475569; }
+    .status-inprogress { background: #fef9c3; color: #a16207; }
+    .status-done { background: #dcfce7; color: #15803d; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      animation: fadeIn 0.15s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+      background: var(--card);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      animation: slideUp 0.2s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header {
+      padding: 1.1rem 1.25rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h2 { font-size: 1rem; font-weight: 700; }
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 1.3rem;
+      line-height: 1;
+      padding: 0.2rem;
+      border-radius: 4px;
+    }
+    .modal-close:hover { background: var(--bg); color: var(--text); }
+    .modal-body { padding: 1.25rem; }
+    .modal-footer {
+      padding: 0.9rem 1.25rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    .form-control {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border-dark);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.88rem;
+      color: var(--text);
+      background: var(--card);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+    textarea.form-control { resize: vertical; min-height: 72px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .form-group.hidden { display: none; }
+    .type-color-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+    /* ── Button Group (replaces select) ── */
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .btn-group button {
+      padding: 0.35rem 0.7rem;
+      border: 1px solid var(--border-dark);
+      border-radius: var(--radius);
+      background: var(--card);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-group button:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .btn-group button.bg-active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    /* ── Settings Modal ── */
+    #settings-modal .modal { max-width: 520px; }
+    .settings-section { margin-bottom: 1.25rem; }
+    .settings-section h3 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .info-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius);
+      padding: 0.75rem 1rem;
+      font-size: 0.8rem;
+      color: #1e40af;
+      line-height: 1.6;
+      margin-bottom: 0.75rem;
+    }
+    .info-box ol { padding-left: 1.25rem; margin-top: 0.3rem; }
+    .info-box li { margin-bottom: 0.2rem; }
+
+    /* ── Day Detail Popup ── */
+    #day-popup {
+      position: fixed;
+      z-index: 500;
+      background: var(--card);
+      border: 1px solid var(--border-dark);
+      border-radius: 10px;
+      box-shadow: var(--shadow-lg);
+      width: 280px;
+      padding: 0.9rem;
+      animation: fadeIn 0.15s ease;
+    }
+    #day-popup .popup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.6rem;
+    }
+    #day-popup .popup-date {
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    #day-popup .popup-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 1.1rem;
+      padding: 0;
+    }
+    #day-popup .popup-event-list { max-height: 260px; overflow-y: auto; }
+    #day-popup .popup-event-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    #day-popup .popup-event-item:last-child { border-bottom: none; }
+    #day-popup .popup-event-item:hover { background: var(--bg); margin: 0 -0.5rem; padding: 0.4rem 0.5rem; border-radius: 4px; }
+    #day-popup .popup-event-color {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    #day-popup .popup-event-info .popup-event-title { font-size: 0.82rem; font-weight: 500; }
+    #day-popup .popup-event-info .popup-event-time { font-size: 0.72rem; color: var(--muted); }
+    #day-popup .popup-add-btn {
+      width: 100%;
+      margin-top: 0.6rem;
+      text-align: center;
+    }
+
+    /* ── Toast ── */
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .toast {
+      background: #1e293b;
+      color: #fff;
+      padding: 0.65rem 1.1rem;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      box-shadow: var(--shadow-lg);
+      animation: slideInRight 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    @keyframes slideInRight {
+      from { transform: translateX(60px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .toast.success { background: #15803d; }
+    .toast.error { background: #dc2626; }
+    .toast.info { background: #2563eb; }
+
+    /* ── Fab ── */
+    #fab {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s, background 0.15s;
+      z-index: 50;
+    }
+    #fab:hover { background: var(--primary-hover); transform: scale(1.08); }
+
+    /* ── Loading Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+    }
+    .spinner.dark {
+      border-color: rgba(37,99,235,0.2);
+      border-top-color: var(--primary);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Utility ── */
+    .hidden { display: none !important; }
+    .ellipsis { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .google-indicator {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4285f4;
+      margin-left: 3px;
+      vertical-align: middle;
+      title: "Google Calendar 同期済み";
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== Header ===== -->
+<header id="app-header">
+  <h1>株コンパス<span>スケジュール</span></h1>
+  <div class="header-nav">
+    <button class="nav-btn" id="btn-prev">&#8592;</button>
+    <span id="current-period">2026年3月</span>
+    <button class="nav-btn" id="btn-next">&#8594;</button>
+    <button class="nav-btn" id="btn-today" style="margin-left:0.25rem;">今日</button>
+    <div class="view-toggle" style="margin-left:0.5rem;">
+      <button id="view-month" class="active">月</button>
+      <button id="view-week">週</button>
+    </div>
+  </div>
+  <div class="header-actions">
+    <span id="sync-status">未接続</span>
+    <button class="btn btn-secondary" id="btn-sync" title="Google Calendar と同期">
+      &#8635; 同期
+    </button>
+    <button class="btn btn-ghost" id="btn-settings" title="設定">⚙</button>
+  </div>
+</header>
+
+<!-- ===== Body ===== -->
+<div id="app-body">
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-section">
+      <h3>イベント種別</h3>
+      <div id="legend-list"></div>
+    </div>
+    <div class="sidebar-section">
+      <h3>担当者</h3>
+      <div id="assignee-legend-list"></div>
+    </div>
+    <div class="sidebar-section">
+      <h3>動画ステータス</h3>
+      <div style="display:flex;flex-direction:column;gap:0.3rem;">
+        <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.82rem;cursor:pointer;">
+          <input type="checkbox" class="video-filter" value="todo" checked> <span class="status-badge status-todo">未着手</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.82rem;cursor:pointer;">
+          <input type="checkbox" class="video-filter" value="inprogress" checked> <span class="status-badge status-inprogress">進行中</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.82rem;cursor:pointer;">
+          <input type="checkbox" class="video-filter" value="done" checked> <span class="status-badge status-done">完了</span>
+        </label>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <h3>ミニカレンダー</h3>
+      <div class="mini-calendar">
+        <div class="mini-cal-header">
+          <button id="mini-prev">&#8592;</button>
+          <span id="mini-label"></span>
+          <button id="mini-next">&#8594;</button>
+        </div>
+        <div class="mini-grid" id="mini-grid"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Calendar -->
+  <main id="calendar-wrap">
+    <!-- Month View -->
+    <div id="month-view">
+      <div class="month-header-row" id="month-header-row"></div>
+      <div class="month-grid" id="month-grid"></div>
+    </div>
+    <!-- Week View -->
+    <div id="week-view" class="hidden">
+      <div class="week-allday-row" id="week-allday-row"></div>
+      <div class="week-header" id="week-header"></div>
+      <div class="week-body" id="week-body"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ===== FAB ===== -->
+<button id="fab" title="イベントを追加">+</button>
+
+<!-- ===== Event Modal ===== -->
+<div class="modal-overlay hidden" id="event-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="event-modal-title">イベントを追加</h2>
+      <button class="modal-close" id="event-modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ev-id">
+      <div class="form-group">
+        <label for="ev-title">タイトル <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="ev-title" class="form-control" placeholder="イベント名を入力">
+      </div>
+      <div class="form-group">
+        <label for="ev-date">日付 <span style="color:var(--danger)">*</span></label>
+        <input type="date" id="ev-date" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>種別 <span style="color:var(--danger)">*</span></label>
+        <div class="btn-group" data-field="ev-type">
+          <button type="button" data-value="live" class="bg-active">🔴 ライブ・配信</button>
+          <button type="button" data-value="content">🔵 コンテンツ更新</button>
+          <button type="button" data-value="shift">🟢 スタッフシフト</button>
+          <button type="button" data-value="newsletter">🟣 メルマガ配信</button>
+          <button type="button" data-value="video">🟠 動画制作</button>
+        </div>
+        <input type="hidden" id="ev-type" value="live">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ev-start">開始時間（任意）</label>
+          <input type="time" id="ev-start" class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="ev-end">終了時間（任意）</label>
+          <input type="time" id="ev-end" class="form-control">
+        </div>
+      </div>
+      <div id="video-fields" style="display:none;">
+        <div class="form-group">
+          <label>サブタイプ</label>
+          <div class="btn-group" data-field="ev-subtype">
+            <button type="button" data-value="script" class="bg-active">台本</button>
+            <button type="button" data-value="slide">スライド</button>
+            <button type="button" data-value="filming">撮影</button>
+          </div>
+          <input type="hidden" id="ev-subtype" value="script">
+        </div>
+        <div class="form-group">
+          <label>ステータス</label>
+          <div class="btn-group" data-field="ev-status">
+            <button type="button" data-value="todo" class="bg-active">未着手</button>
+            <button type="button" data-value="inprogress">進行中</button>
+            <button type="button" data-value="done">完了</button>
+          </div>
+          <input type="hidden" id="ev-status" value="todo">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>担当者（任意）</label>
+        <div class="btn-group" data-field="ev-assignee">
+          <button type="button" data-value="" class="bg-active">なし</button>
+          <button type="button" data-value="nonaka">野中</button>
+          <button type="button" data-value="kotani">小谷</button>
+        </div>
+        <input type="hidden" id="ev-assignee" value="">
+      </div>
+      <div class="form-group">
+        <label for="ev-notes">メモ（任意）</label>
+        <textarea id="ev-notes" class="form-control" placeholder="メモを入力"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <input type="hidden" id="ev-completed" value="false">
+      <button class="btn btn-danger hidden" id="ev-delete">削除</button>
+      <button class="btn hidden" id="ev-complete" style="background:#16a34a;color:#fff;">✓ 完了にする</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" id="ev-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="ev-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Day Popup ===== -->
+<div id="day-popup" class="hidden">
+  <div class="popup-header">
+    <span class="popup-date" id="popup-date-label"></span>
+    <button class="popup-close" id="popup-close">&times;</button>
+  </div>
+  <div class="popup-event-list" id="popup-event-list"></div>
+  <div class="popup-add-btn">
+    <button class="btn btn-primary" id="popup-add-btn" style="font-size:0.8rem;padding:0.35rem 0.75rem;">+ 追加</button>
+  </div>
+</div>
+
+<!-- ===== Settings Modal ===== -->
+<div class="modal-overlay hidden" id="settings-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h2>設定</h2>
+      <button class="modal-close" id="settings-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-section">
+        <h3>Google Calendar 連携</h3>
+        <div class="info-box">
+          <strong>事前準備（1回だけ）：</strong>
+          <ol>
+            <li>Google Cloud Console でプロジェクトを作成</li>
+            <li>Google Calendar API を有効化</li>
+            <li>OAuth クライアントID（Webアプリ）を作成</li>
+            <li>承認済み JavaScript オリジンに <code>http://localhost</code> や実際のURLを追加</li>
+            <li>クライアントIDを下記に入力して保存</li>
+          </ol>
+        </div>
+        <div class="form-group">
+          <label for="cfg-client-id">OAuth クライアントID</label>
+          <input type="text" id="cfg-client-id" class="form-control" placeholder="xxxx.apps.googleusercontent.com">
+        </div>
+        <div class="form-group">
+          <label for="cfg-calendar-id">カレンダーID</label>
+          <input type="text" id="cfg-calendar-id" class="form-control" placeholder="azuchan553@gmail.com">
+        </div>
+        <div class="form-group">
+          <label for="cfg-sync-months">同期範囲（前後 N ヶ月）</label>
+          <div class="btn-group" data-field="cfg-sync-months">
+            <button type="button" data-value="1">1ヶ月</button>
+            <button type="button" data-value="2">2ヶ月</button>
+            <button type="button" data-value="3" class="bg-active">3ヶ月</button>
+            <button type="button" data-value="6">6ヶ月</button>
+          </div>
+          <input type="hidden" id="cfg-sync-months" value="3">
+        </div>
+      </div>
+      <div class="settings-section">
+        <h3>データ管理</h3>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button class="btn btn-secondary" id="btn-export">エクスポート（JSON）</button>
+          <label class="btn btn-secondary" style="cursor:pointer;margin:0;">
+            インポート（JSON）
+            <input type="file" id="btn-import" accept=".json" style="display:none;">
+          </label>
+          <button class="btn btn-danger" id="btn-clear-data">全データ削除</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="settings-cancel">閉じる</button>
+      <button class="btn btn-primary" id="settings-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Toast Container ===== -->
+<div id="toast-container"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  CONSTANTS
+// ════════════════════════════════════════════════════════
+const EVENT_TYPES = {
+  live:       { label: 'ライブ・配信',   color: '#e74c3c' },
+  content:    { label: 'コンテンツ更新', color: '#3498db' },
+  shift:      { label: 'スタッフシフト', color: '#2ecc71' },
+  newsletter: { label: 'メルマガ配信',  color: '#9b59b6' },
+  video:      { label: '動画制作',       color: '#f39c12' },
+};
+const VIDEO_SUBTYPES = { script: '台本', slide: 'スライド', filming: '撮影' };
+const STATUS_LABELS  = { todo: '未着手', inprogress: '進行中', done: '完了' };
+const DOW_JA = ['日','月','火','水','木','金','土'];
+const STORAGE_KEY  = 'stocksalon_events';
+const CONFIG_KEY   = 'stocksalon_config';
+const SCOPES       = 'https://www.googleapis.com/auth/calendar';
+const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
+const ASSIGNEES = {
+  nonaka: { label: '野中', color: '#0891b2' },  // シアン
+  kotani: { label: '小谷', color: '#be185d' },  // ローズ
+};
+
+// ════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════
+let state = {
+  today: new Date(),
+  current: new Date(),   // displayed month/week anchor
+  view: 'month',         // 'month' | 'week'
+  events: [],
+  filters: { live: true, content: true, shift: true, newsletter: true, video: true },
+  videoFilters: { todo: true, inprogress: true, done: true },
+  assigneeFilters: { nonaka: true, kotani: true },
+  selectedDate: null,
+  config: { clientId: '', calendarId: 'azuchan553@gmail.com', syncMonths: 3 },
+  gapi: { loaded: false, signed: false, tokenClient: null },
+};
+
+// ════════════════════════════════════════════════════════
+//  PERSISTENCE
+// ════════════════════════════════════════════════════════
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    state.events = raw ? JSON.parse(raw) : [];
+  } catch { state.events = []; }
+  try {
+    const cfg = localStorage.getItem(CONFIG_KEY);
+    if (cfg) Object.assign(state.config, JSON.parse(cfg));
+  } catch {}
+  // 特典動画3本 編集完了を 3/19 → 3/9 に統一
+  const ev = state.events.find(e => e.title === '特典動画3本 編集完了');
+  if (ev && ev.date === '2026-03-19') {
+    ev.date = '2026-03-09';
+    ev.notes = '3/9までに完了';
+    saveEvents();
+  }
+}
+
+function saveEvents() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.events));
+}
+
+function saveConfig() {
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(state.config));
+}
+
+// ════════════════════════════════════════════════════════
+//  BUTTON GROUP HELPER
+// ════════════════════════════════════════════════════════
+function setBtnGroup(fieldId, value) {
+  const input = document.getElementById(fieldId);
+  if (input) input.value = value;
+  const group = document.querySelector(`.btn-group[data-field="${fieldId}"]`);
+  if (!group) return;
+  group.querySelectorAll('button').forEach(btn => {
+    btn.classList.toggle('bg-active', btn.dataset.value === String(value));
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  UUID
+// ════════════════════════════════════════════════════════
+function uuid() {
+  return crypto.randomUUID ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+}
+
+// ════════════════════════════════════════════════════════
+//  DATE HELPERS
+// ════════════════════════════════════════════════════════
+function toYMD(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function parseYMD(s) {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function addDays(date, n) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+function startOfWeek(date) {
+  const d = new Date(date);
+  d.setDate(d.getDate() - d.getDay()); // Sunday
+  return d;
+}
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate();
+}
+
+function isToday(date) {
+  return isSameDay(date, state.today);
+}
+
+function formatJa(date) {
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（${DOW_JA[date.getDay()]}）`;
+}
+
+// ════════════════════════════════════════════════════════
+//  EVENT CRUD
+// ════════════════════════════════════════════════════════
+function getEvent(id) { return state.events.find(e => e.id === id); }
+
+function createEvent(data) {
+  const ev = { id: uuid(), googleEventId: null, updatedAt: new Date().toISOString(), ...data };
+  state.events.push(ev);
+  saveEvents();
+  return ev;
+}
+
+function updateEvent(id, data) {
+  const idx = state.events.findIndex(e => e.id === id);
+  if (idx < 0) return null;
+  state.events[idx] = { ...state.events[idx], ...data, updatedAt: new Date().toISOString() };
+  saveEvents();
+  return state.events[idx];
+}
+
+function deleteEvent(id) {
+  const ev = getEvent(id);
+  state.events = state.events.filter(e => e.id !== id);
+  saveEvents();
+  return ev;
+}
+
+function getEventsForDate(ymd) {
+  return state.events.filter(e => e.date === ymd);
+}
+
+function visibleEvents() {
+  return state.events.filter(e => {
+    if (!state.filters[e.type]) return false;
+    if (e.type === 'video' && e.status && !state.videoFilters[e.status]) return false;
+    if (e.assignee && !state.assigneeFilters[e.assignee]) return false;
+    return true;
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  RENDER HELPERS
+// ════════════════════════════════════════════════════════
+function eventColor(ev) {
+  if (ev.assignee && ASSIGNEES[ev.assignee]) return ASSIGNEES[ev.assignee].color;
+  return (EVENT_TYPES[ev.type] || EVENT_TYPES.content).color;
+}
+
+function makeChip(ev) {
+  const div = document.createElement('div');
+  div.className = 'event-chip' + (ev.completed ? ' completed' : '');
+  div.style.background = eventColor(ev);
+  div.dataset.evId = ev.id;
+
+  let html = '';
+  if (ev.completed) html += `<span style="flex-shrink:0;">✓</span>`;
+  if (ev.startTime) html += `<span class="chip-time">${ev.startTime}</span>`;
+  html += `<span class="chip-title">${esc(ev.title)}</span>`;
+  if (ev.assignee && ASSIGNEES[ev.assignee]) {
+    html += ` <span style="font-size:0.62rem;background:rgba(255,255,255,0.25);border-radius:8px;padding:0 4px;">${ASSIGNEES[ev.assignee].label}</span>`;
+  }
+  if (ev.type === 'video' && ev.status) {
+    const cls = `status-${ev.status}`;
+    html += ` <span class="status-badge ${cls}" style="font-size:0.6rem;">${STATUS_LABELS[ev.status]}</span>`;
+  }
+  if (ev.googleEventId) html += `<span class="google-indicator" title="Google Calendar"></span>`;
+  div.innerHTML = html;
+  div.addEventListener('click', e => { e.stopPropagation(); openEditModal(ev.id); });
+  return div;
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════════════════════════
+//  MONTH VIEW
+// ════════════════════════════════════════════════════════
+function renderMonthHeaders() {
+  const row = document.getElementById('month-header-row');
+  row.innerHTML = '';
+  DOW_JA.forEach((d, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'day-header' + (i === 0 || i === 6 ? ' weekend' : '');
+    cell.textContent = d;
+    row.appendChild(cell);
+  });
+}
+
+function renderMonth() {
+  const grid = document.getElementById('month-grid');
+  grid.innerHTML = '';
+
+  const y = state.current.getFullYear();
+  const m = state.current.getMonth();
+  const firstDay = new Date(y, m, 1);
+  const lastDay  = new Date(y, m + 1, 0);
+  const startDate = addDays(firstDay, -firstDay.getDay());
+  const totalDays = 42; // 6 weeks
+
+  const vis = visibleEvents();
+  const evMap = {};
+  vis.forEach(ev => {
+    if (!evMap[ev.date]) evMap[ev.date] = [];
+    evMap[ev.date].push(ev);
+  });
+
+  for (let i = 0; i < totalDays; i++) {
+    const date = addDays(startDate, i);
+    const ymd  = toYMD(date);
+    const isCurrentMonth = date.getMonth() === m;
+    const dow = date.getDay();
+    const todayFlag = isToday(date);
+
+    const cell = document.createElement('div');
+    cell.className = 'month-day'
+      + (isCurrentMonth ? '' : ' other-month')
+      + (dow === 0 || dow === 6 ? ' day-weekend' : '')
+      + (todayFlag ? ' today' : '');
+    cell.dataset.date = ymd;
+
+    // Day number
+    const numSpan = document.createElement('div');
+    numSpan.className = 'day-num';
+    numSpan.textContent = date.getDate();
+    cell.appendChild(numSpan);
+
+    // Events
+    const dayEvs = (evMap[ymd] || []).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+    dayEvs.forEach(ev => cell.appendChild(makeChip(ev)));
+
+    // Click on empty area
+    cell.addEventListener('click', () => {
+      if (window.event && window.event.target.closest('.event-chip')) return;
+      openAddModal(ymd);
+    });
+
+    grid.appendChild(cell);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  WEEK VIEW
+// ════════════════════════════════════════════════════════
+function renderWeek() {
+  const weekStart = startOfWeek(state.current);
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  // Header
+  const header = document.getElementById('week-header');
+  header.innerHTML = '<div class="wh-gutter"></div>';
+  weekDays.forEach(date => {
+    const dow = date.getDay();
+    const todayFlag = isToday(date);
+    const div = document.createElement('div');
+    div.className = 'wh-day'
+      + (todayFlag ? ' today' : '')
+      + (dow === 0 || dow === 6 ? ' weekend' : '');
+    div.innerHTML = `<div class="wh-dow">${DOW_JA[dow]}</div>
+      <div class="wh-date">${date.getDate()}</div>`;
+    header.appendChild(div);
+  });
+
+  // All-day row
+  const alldayRow = document.getElementById('week-allday-row');
+  alldayRow.innerHTML = '<div class="week-allday-gutter">終日</div>';
+  const vis = visibleEvents();
+  weekDays.forEach(date => {
+    const ymd = toYMD(date);
+    const cell = document.createElement('div');
+    cell.className = 'week-allday-cell';
+    const dayEvs = vis.filter(e => e.date === ymd && !e.startTime);
+    dayEvs.forEach(ev => {
+      const chip = makeChip(ev);
+      chip.style.fontSize = '0.7rem';
+      cell.appendChild(chip);
+    });
+    cell.addEventListener('click', () => openAddModal(ymd));
+    alldayRow.appendChild(cell);
+  });
+
+  // Body
+  const body = document.getElementById('week-body');
+  body.innerHTML = '';
+
+  // Time column
+  const timeCol = document.createElement('div');
+  timeCol.className = 'week-time-col';
+  for (let h = 0; h < 24; h++) {
+    const slot = document.createElement('div');
+    slot.className = 'week-time-slot';
+    slot.textContent = h === 0 ? '' : `${String(h).padStart(2,'0')}:00`;
+    timeCol.appendChild(slot);
+  }
+  body.appendChild(timeCol);
+
+  // Day columns
+  weekDays.forEach(date => {
+    const ymd = toYMD(date);
+    const col = document.createElement('div');
+    col.className = 'week-day-col';
+
+    for (let h = 0; h < 24; h++) {
+      const row = document.createElement('div');
+      row.className = 'week-hour-row';
+      row.dataset.date = ymd;
+      row.dataset.hour = h;
+      row.addEventListener('click', () => openAddModal(ymd, `${String(h).padStart(2,'0')}:00`));
+      col.appendChild(row);
+    }
+
+    // Place timed events
+    const dayEvs = vis.filter(e => e.date === ymd && e.startTime);
+    dayEvs.forEach(ev => {
+      const [sh, sm] = ev.startTime.split(':').map(Number);
+      const startPx = (sh + sm / 60) * 48;
+      let endPx = startPx + 48;
+      if (ev.endTime) {
+        const [eh, em] = ev.endTime.split(':').map(Number);
+        endPx = (eh + em / 60) * 48;
+      }
+      const chip = document.createElement('div');
+      chip.className = 'week-event';
+      chip.style.cssText = `background:${eventColor(ev)};top:${startPx}px;height:${Math.max(endPx - startPx, 20)}px;`;
+      chip.innerHTML = `<span>${esc(ev.title)}</span>`;
+      if (ev.type === 'video' && ev.status) {
+        chip.innerHTML += ` <span class="status-badge status-${ev.status}" style="font-size:0.6rem;">${STATUS_LABELS[ev.status]}</span>`;
+      }
+      chip.addEventListener('click', e => { e.stopPropagation(); openEditModal(ev.id); });
+      col.appendChild(chip);
+    });
+
+    body.appendChild(col);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  MINI CALENDAR
+// ════════════════════════════════════════════════════════
+let miniDate = new Date();
+function renderMini() {
+  document.getElementById('mini-label').textContent =
+    `${miniDate.getFullYear()}年${miniDate.getMonth() + 1}月`;
+  const grid = document.getElementById('mini-grid');
+  grid.innerHTML = '';
+  DOW_JA.forEach(d => {
+    const span = document.createElement('span');
+    span.className = 'day-name';
+    span.textContent = d;
+    grid.appendChild(span);
+  });
+
+  const firstDay = new Date(miniDate.getFullYear(), miniDate.getMonth(), 1);
+  const start = addDays(firstDay, -firstDay.getDay());
+  const evDates = new Set(state.events.map(e => e.date));
+
+  for (let i = 0; i < 42; i++) {
+    const date = addDays(start, i);
+    const ymd = toYMD(date);
+    const span = document.createElement('span');
+    span.className = 'day-num'
+      + (date.getMonth() !== miniDate.getMonth() ? ' other-month' : '')
+      + (isToday(date) ? ' today' : '')
+      + (evDates.has(ymd) ? ' has-event' : '');
+    span.textContent = date.getDate();
+    span.addEventListener('click', () => {
+      state.current = new Date(date);
+      if (state.view === 'week') state.current = new Date(date);
+      renderCalendar();
+    });
+    grid.appendChild(span);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  LEGEND
+// ════════════════════════════════════════════════════════
+function renderLegend() {
+  const list = document.getElementById('legend-list');
+  list.innerHTML = '';
+  Object.entries(EVENT_TYPES).forEach(([key, info]) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item' + (state.filters[key] ? '' : ' inactive');
+    item.innerHTML = `<span class="legend-dot" style="background:${info.color}"></span>${info.label}`;
+    item.addEventListener('click', () => {
+      state.filters[key] = !state.filters[key];
+      item.classList.toggle('inactive');
+      renderCalendar();
+    });
+    list.appendChild(item);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  ASSIGNEE LEGEND
+// ════════════════════════════════════════════════════════
+function renderAssigneeLegend() {
+  const list = document.getElementById('assignee-legend-list');
+  list.innerHTML = '';
+  Object.entries(ASSIGNEES).forEach(([key, info]) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item' + (state.assigneeFilters[key] ? '' : ' inactive');
+    item.innerHTML = `<span class="legend-dot" style="background:${info.color}"></span>${info.label}`;
+    item.addEventListener('click', () => {
+      state.assigneeFilters[key] = !state.assigneeFilters[key];
+      item.classList.toggle('inactive');
+      renderCalendar();
+    });
+    list.appendChild(item);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  PERIOD LABEL
+// ════════════════════════════════════════════════════════
+function updatePeriodLabel() {
+  const el = document.getElementById('current-period');
+  if (state.view === 'month') {
+    el.textContent = `${state.current.getFullYear()}年${state.current.getMonth() + 1}月`;
+  } else {
+    const ws = startOfWeek(state.current);
+    const we = addDays(ws, 6);
+    if (ws.getMonth() === we.getMonth()) {
+      el.textContent = `${ws.getFullYear()}年${ws.getMonth() + 1}月 ${ws.getDate()}日〜${we.getDate()}日`;
+    } else {
+      el.textContent = `${ws.getMonth() + 1}月${ws.getDate()}日〜${we.getMonth() + 1}月${we.getDate()}日`;
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  RENDER CALENDAR (dispatch)
+// ════════════════════════════════════════════════════════
+function renderCalendar() {
+  updatePeriodLabel();
+  renderMini();
+  if (state.view === 'month') {
+    renderMonth();
+  } else {
+    renderWeek();
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  MODAL - ADD / EDIT
+// ════════════════════════════════════════════════════════
+function openAddModal(date, startTime = '') {
+  const modal = document.getElementById('event-modal');
+  document.getElementById('event-modal-title').textContent = 'イベントを追加';
+  document.getElementById('ev-id').value = '';
+  document.getElementById('ev-title').value = '';
+  document.getElementById('ev-date').value = date || toYMD(new Date());
+  setBtnGroup('ev-type', 'live');
+  document.getElementById('ev-start').value = startTime;
+  document.getElementById('ev-end').value = '';
+  setBtnGroup('ev-subtype', 'script');
+  setBtnGroup('ev-status', 'todo');
+  setBtnGroup('ev-assignee', '');
+  document.getElementById('ev-notes').value = '';
+  document.getElementById('ev-completed').value = 'false';
+  document.getElementById('ev-delete').classList.add('hidden');
+  document.getElementById('ev-complete').classList.add('hidden');
+  toggleVideoFields('live');
+  modal.classList.remove('hidden');
+  document.getElementById('ev-title').focus();
+  closeDayPopup();
+}
+
+function openEditModal(id) {
+  const ev = getEvent(id);
+  if (!ev) return;
+  document.getElementById('event-modal-title').textContent = 'イベントを編集';
+  document.getElementById('ev-id').value = ev.id;
+  document.getElementById('ev-title').value = ev.title || '';
+  document.getElementById('ev-date').value = ev.date || '';
+  setBtnGroup('ev-type', ev.type || 'live');
+  document.getElementById('ev-start').value = ev.startTime || '';
+  document.getElementById('ev-end').value = ev.endTime || '';
+  setBtnGroup('ev-subtype', ev.videoSubtype || 'script');
+  setBtnGroup('ev-status', ev.status || 'todo');
+  setBtnGroup('ev-assignee', ev.assignee || '');
+  document.getElementById('ev-notes').value = ev.notes || '';
+  document.getElementById('ev-completed').value = ev.completed ? 'true' : 'false';
+  document.getElementById('ev-delete').classList.remove('hidden');
+  updateCompleteButton(ev.completed);
+  toggleVideoFields(ev.type);
+  document.getElementById('event-modal').classList.remove('hidden');
+  document.getElementById('ev-title').focus();
+  closeDayPopup();
+}
+
+function closeEventModal() {
+  document.getElementById('event-modal').classList.add('hidden');
+}
+
+function toggleVideoFields(type) {
+  document.getElementById('video-fields').style.display = type === 'video' ? 'block' : 'none';
+}
+
+function updateCompleteButton(completed) {
+  const btn = document.getElementById('ev-complete');
+  btn.classList.remove('hidden');
+  if (completed) {
+    btn.textContent = '↩ 未完了に戻す';
+    btn.style.background = '#6b7280';
+  } else {
+    btn.textContent = '✓ 完了にする';
+    btn.style.background = '#16a34a';
+  }
+}
+
+function saveEventFromModal() {
+  const title = document.getElementById('ev-title').value.trim();
+  const date  = document.getElementById('ev-date').value;
+  const type  = document.getElementById('ev-type').value;
+  if (!title) { showToast('タイトルを入力してください', 'error'); return; }
+  if (!date)  { showToast('日付を選択してください', 'error'); return; }
+
+  const data = {
+    title,
+    date,
+    type,
+    startTime:    document.getElementById('ev-start').value || null,
+    endTime:      document.getElementById('ev-end').value   || null,
+    videoSubtype: type === 'video' ? document.getElementById('ev-subtype').value : null,
+    status:       type === 'video' ? document.getElementById('ev-status').value  : null,
+    assignee:     document.getElementById('ev-assignee').value || null,
+    notes:        document.getElementById('ev-notes').value.trim() || null,
+    completed:    document.getElementById('ev-completed').value === 'true',
+  };
+
+  const id = document.getElementById('ev-id').value;
+  if (id) {
+    updateEvent(id, data);
+    showToast('イベントを更新しました', 'success');
+  } else {
+    createEvent(data);
+    showToast('イベントを追加しました', 'success');
+  }
+  closeEventModal();
+  renderCalendar();
+}
+
+function deleteEventFromModal() {
+  const id = document.getElementById('ev-id').value;
+  if (!id) return;
+  if (!confirm('このイベントを削除しますか？')) return;
+  deleteEvent(id);
+  showToast('イベントを削除しました');
+  closeEventModal();
+  renderCalendar();
+}
+
+// ════════════════════════════════════════════════════════
+//  DAY POPUP
+// ════════════════════════════════════════════════════════
+let popupDate = null;
+function showDayPopup(ymd, e) {
+  popupDate = ymd;
+  const popup = document.getElementById('day-popup');
+  document.getElementById('popup-date-label').textContent = formatJa(parseYMD(ymd));
+
+  const list = document.getElementById('popup-event-list');
+  list.innerHTML = '';
+  const dayEvs = visibleEvents().filter(ev => ev.date === ymd)
+    .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+
+  if (dayEvs.length === 0) {
+    list.innerHTML = '<p style="font-size:0.8rem;color:var(--muted);text-align:center;padding:0.5rem 0;">イベントなし</p>';
+  } else {
+    dayEvs.forEach(ev => {
+      const item = document.createElement('div');
+      item.className = 'popup-event-item';
+      item.innerHTML = `
+        <span class="popup-event-color" style="background:${eventColor(ev)}"></span>
+        <div class="popup-event-info">
+          <div class="popup-event-title">${esc(ev.title)}</div>
+          ${ev.startTime ? `<div class="popup-event-time">${ev.startTime}${ev.endTime ? '〜'+ev.endTime : ''}</div>` : ''}
+        </div>`;
+      item.addEventListener('click', () => openEditModal(ev.id));
+      list.appendChild(item);
+    });
+  }
+
+  // Position popup near click
+  const rect = { x: e.clientX || 0, y: e.clientY || 0 };
+  popup.style.left = Math.min(rect.x, window.innerWidth - 300) + 'px';
+  popup.style.top  = Math.min(rect.y, window.innerHeight - 350) + 'px';
+  popup.classList.remove('hidden');
+}
+
+function closeDayPopup() {
+  document.getElementById('day-popup').classList.add('hidden');
+  popupDate = null;
+}
+
+// ════════════════════════════════════════════════════════
+//  SETTINGS MODAL
+// ════════════════════════════════════════════════════════
+function openSettings() {
+  document.getElementById('cfg-client-id').value   = state.config.clientId   || '';
+  document.getElementById('cfg-calendar-id').value = state.config.calendarId || 'primary';
+  setBtnGroup('cfg-sync-months', String(state.config.syncMonths || 3));
+  document.getElementById('settings-modal').classList.remove('hidden');
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').classList.add('hidden');
+}
+
+function saveSettings() {
+  state.config.clientId   = document.getElementById('cfg-client-id').value.trim();
+  state.config.calendarId = document.getElementById('cfg-calendar-id').value.trim() || 'primary';
+  state.config.syncMonths = parseInt(document.getElementById('cfg-sync-months').value) || 3;
+  saveConfig();
+  closeSettings();
+  showToast('設定を保存しました', 'success');
+  initGoogleClient();
+}
+
+// ════════════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════════════
+function showToast(msg, type = 'default', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+// ════════════════════════════════════════════════════════
+//  EXPORT / IMPORT
+// ════════════════════════════════════════════════════════
+function exportData() {
+  const json = JSON.stringify({ events: state.events, exportedAt: new Date().toISOString() }, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `stocksalon-schedule-${toYMD(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('エクスポートしました', 'success');
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const imported = data.events || data;
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      if (!confirm(`${imported.length} 件のイベントをインポートします。既存データとマージしますか？`)) return;
+      // Merge by id
+      const existingIds = new Set(state.events.map(ev => ev.id));
+      let added = 0;
+      imported.forEach(ev => {
+        if (!existingIds.has(ev.id)) { state.events.push(ev); added++; }
+      });
+      saveEvents();
+      renderCalendar();
+      showToast(`${added} 件インポートしました`, 'success');
+    } catch {
+      showToast('インポートに失敗しました', 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function clearAllData() {
+  if (!confirm('全てのイベントデータを削除します。この操作は取り消せません。よろしいですか？')) return;
+  state.events = [];
+  saveEvents();
+  renderCalendar();
+  showToast('データを削除しました');
+}
+
+// ════════════════════════════════════════════════════════
+//  GOOGLE CALENDAR INTEGRATION
+// ════════════════════════════════════════════════════════
+function setSyncStatus(text, cls = '') {
+  const el = document.getElementById('sync-status');
+  el.textContent = text;
+  el.className = cls;
+}
+
+function initGoogleClient() {
+  if (!state.config.clientId) {
+    setSyncStatus('未設定（設定を開く）');
+    return;
+  }
+  if (!window.google || !window.gapi) {
+    setSyncStatus('ライブラリ読込中...');
+    setTimeout(initGoogleClient, 1000);
+    return;
+  }
+
+  gapi.load('client', async () => {
+    try {
+      await gapi.client.init({
+        discoveryDocs: [DISCOVERY_DOC],
+      });
+      state.gapi.loaded = true;
+
+      state.gapi.tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: state.config.clientId,
+        scope: SCOPES,
+        callback: (tokenResponse) => {
+          if (tokenResponse.error) {
+            setSyncStatus('認証エラー', 'error');
+            showToast('Google認証に失敗しました: ' + tokenResponse.error, 'error');
+            return;
+          }
+          state.gapi.signed = true;
+          setSyncStatus('接続済み', 'synced');
+          doSync();
+        },
+      });
+      setSyncStatus('未認証（同期ボタンで接続）');
+    } catch (err) {
+      setSyncStatus('初期化エラー', 'error');
+      console.error('GAPI init error:', err);
+    }
+  });
+}
+
+async function triggerSync() {
+  if (!state.config.clientId) {
+    openSettings();
+    showToast('クライアントIDを設定してください', 'info');
+    return;
+  }
+  if (!state.gapi.loaded) {
+    showToast('Google APIを読み込み中です。しばらくお待ちください。', 'info');
+    return;
+  }
+  if (!state.gapi.signed) {
+    state.gapi.tokenClient.requestAccessToken({ prompt: 'consent' });
+    return;
+  }
+  doSync();
+}
+
+async function doSync() {
+  setSyncStatus('同期中...', 'syncing');
+  document.getElementById('btn-sync').innerHTML = '<span class="spinner"></span> 同期中';
+  document.getElementById('btn-sync').disabled = true;
+
+  try {
+    const months = state.config.syncMonths || 3;
+    const now = new Date();
+    const timeMin = new Date(now.getFullYear(), now.getMonth() - months, 1).toISOString();
+    const timeMax = new Date(now.getFullYear(), now.getMonth() + months + 1, 0).toISOString();
+    const calId = state.config.calendarId || 'primary';
+
+    // Fetch Google events
+    const resp = await gapi.client.calendar.events.list({
+      calendarId: calId,
+      timeMin,
+      timeMax,
+      singleEvents: true,
+      maxResults: 1000,
+      orderBy: 'startTime',
+    });
+    const gEvents = resp.result.items || [];
+
+    let added = 0, pushed = 0, updated = 0;
+
+    // Google → Local
+    const gIds = new Set(gEvents.map(g => g.id));
+    const localGIds = new Set(state.events.filter(e => e.googleEventId).map(e => e.googleEventId));
+
+    for (const gEv of gEvents) {
+      // 「サロン」を含むイベントのみ対象
+      if (!(gEv.summary || '').includes('サロン')) continue;
+
+      const dateStr = (gEv.start.date || gEv.start.dateTime || '').substring(0, 10);
+      const existing = state.events.find(e => e.googleEventId === gEv.id);
+      if (existing) {
+        // Check which is newer
+        const gUpdated = new Date(gEv.updated || 0);
+        const lUpdated = new Date(existing.updatedAt || 0);
+        if (gUpdated > lUpdated) {
+          updateEvent(existing.id, {
+            title: gEv.summary || '(タイトルなし)',
+            date: dateStr,
+            startTime: gEv.start.dateTime ? gEv.start.dateTime.substring(11, 16) : null,
+            endTime:   gEv.end.dateTime   ? gEv.end.dateTime.substring(11, 16)   : null,
+            notes: gEv.description || null,
+          });
+          updated++;
+        }
+      } else if (!localGIds.has(gEv.id)) {
+        // New event from Google
+        createEvent({
+          title: gEv.summary || '(タイトルなし)',
+          date: dateStr,
+          startTime: gEv.start.dateTime ? gEv.start.dateTime.substring(11, 16) : null,
+          endTime:   gEv.end.dateTime   ? gEv.end.dateTime.substring(11, 16)   : null,
+          type: guessType(gEv.summary || ''),
+          notes: gEv.description || null,
+          googleEventId: gEv.id,
+        });
+        added++;
+      }
+    }
+
+    // Local → Google (events without googleEventId)
+    const localOnly = state.events.filter(e => !e.googleEventId);
+    for (const ev of localOnly) {
+      const resource = buildGoogleEventResource(ev, calId);
+      const created = await gapi.client.calendar.events.insert({
+        calendarId: calId,
+        resource,
+      });
+      updateEvent(ev.id, { googleEventId: created.result.id });
+      pushed++;
+    }
+
+    const msg = `同期完了: +${added}件取得, +${pushed}件送信, ${updated}件更新`;
+    setSyncStatus('同期済み', 'synced');
+    showToast(msg, 'success', 4000);
+    renderCalendar();
+  } catch (err) {
+    console.error('Sync error:', err);
+    setSyncStatus('同期エラー', 'error');
+    showToast('同期中にエラーが発生しました: ' + (err.message || err.result?.error?.message || '不明なエラー'), 'error', 5000);
+  } finally {
+    document.getElementById('btn-sync').innerHTML = '&#8635; 同期';
+    document.getElementById('btn-sync').disabled = false;
+  }
+}
+
+function buildGoogleEventResource(ev, calId) {
+  const resource = {
+    summary: ev.title,
+    description: [
+      ev.notes || '',
+      ev.type ? `[種別: ${EVENT_TYPES[ev.type]?.label || ev.type}]` : '',
+      ev.videoSubtype ? `[サブタイプ: ${VIDEO_SUBTYPES[ev.videoSubtype] || ev.videoSubtype}]` : '',
+      ev.status ? `[ステータス: ${STATUS_LABELS[ev.status] || ev.status}]` : '',
+    ].filter(Boolean).join('\n'),
+  };
+  if (ev.startTime) {
+    resource.start = { dateTime: `${ev.date}T${ev.startTime}:00`, timeZone: 'Asia/Tokyo' };
+    resource.end   = { dateTime: `${ev.date}T${ev.endTime || addMinutes(ev.startTime, 60)}:00`, timeZone: 'Asia/Tokyo' };
+  } else {
+    resource.start = { date: ev.date };
+    resource.end   = { date: ev.date };
+  }
+  return resource;
+}
+
+function addMinutes(timeStr, mins) {
+  const [h, m] = timeStr.split(':').map(Number);
+  const total = h * 60 + m + mins;
+  return `${String(Math.floor(total / 60) % 24).padStart(2,'0')}:${String(total % 60).padStart(2,'0')}`;
+}
+
+function guessType(title) {
+  const t = title.toLowerCase();
+  if (/ライブ|配信|live/.test(t)) return 'live';
+  if (/動画|video/.test(t)) return 'video';
+  if (/シフト|shift|スタッフ/.test(t)) return 'shift';
+  if (/メルマガ|newsletter|mail/.test(t)) return 'newsletter';
+  return 'content';
+}
+
+// ════════════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════════════
+function navigate(dir) {
+  if (state.view === 'month') {
+    state.current.setMonth(state.current.getMonth() + dir);
+  } else {
+    state.current = addDays(state.current, dir * 7);
+  }
+  renderCalendar();
+}
+
+function goToday() {
+  state.current = new Date(state.today);
+  renderCalendar();
+}
+
+// ════════════════════════════════════════════════════════
+//  EVENT LISTENERS
+// ════════════════════════════════════════════════════════
+function bindEvents() {
+  // Navigation
+  document.getElementById('btn-prev').addEventListener('click', () => navigate(-1));
+  document.getElementById('btn-next').addEventListener('click', () => navigate(1));
+  document.getElementById('btn-today').addEventListener('click', goToday);
+
+  // View toggle
+  document.getElementById('view-month').addEventListener('click', () => {
+    state.view = 'month';
+    document.getElementById('view-month').classList.add('active');
+    document.getElementById('view-week').classList.remove('active');
+    document.getElementById('month-view').classList.remove('hidden');
+    document.getElementById('week-view').classList.add('hidden');
+    renderCalendar();
+  });
+  document.getElementById('view-week').addEventListener('click', () => {
+    state.view = 'week';
+    document.getElementById('view-week').classList.add('active');
+    document.getElementById('view-month').classList.remove('active');
+    document.getElementById('week-view').classList.remove('hidden');
+    document.getElementById('month-view').classList.add('hidden');
+    renderCalendar();
+  });
+
+  // Sync / Settings
+  document.getElementById('btn-sync').addEventListener('click', triggerSync);
+  document.getElementById('btn-settings').addEventListener('click', openSettings);
+
+  // FAB
+  document.getElementById('fab').addEventListener('click', () => openAddModal(toYMD(new Date())));
+
+  // Event modal
+  document.getElementById('event-modal-close').addEventListener('click', closeEventModal);
+  document.getElementById('ev-cancel').addEventListener('click', closeEventModal);
+  document.getElementById('ev-save').addEventListener('click', saveEventFromModal);
+  document.getElementById('ev-delete').addEventListener('click', deleteEventFromModal);
+
+  // Button groups
+  document.querySelectorAll('.btn-group').forEach(group => {
+    group.addEventListener('click', e => {
+      const btn = e.target.closest('button[data-value]');
+      if (!btn) return;
+      const fieldId = group.dataset.field;
+      setBtnGroup(fieldId, btn.dataset.value);
+      if (fieldId === 'ev-type') toggleVideoFields(btn.dataset.value);
+    });
+  });
+
+  // Complete button
+  document.getElementById('ev-complete').addEventListener('click', () => {
+    const id = document.getElementById('ev-id').value;
+    if (!id) return;
+    const isCompleted = document.getElementById('ev-completed').value === 'true';
+    const newCompleted = !isCompleted;
+    document.getElementById('ev-completed').value = String(newCompleted);
+    updateCompleteButton(newCompleted);
+    updateEvent(id, { completed: newCompleted });
+    showToast(newCompleted ? 'タスクを完了にしました' : '未完了に戻しました', 'success');
+    closeEventModal();
+    renderCalendar();
+  });
+
+  // Day popup
+  document.getElementById('popup-close').addEventListener('click', closeDayPopup);
+  document.getElementById('popup-add-btn').addEventListener('click', () => {
+    if (popupDate) openAddModal(popupDate);
+  });
+
+  // Settings modal
+  document.getElementById('settings-close').addEventListener('click', closeSettings);
+  document.getElementById('settings-cancel').addEventListener('click', closeSettings);
+  document.getElementById('settings-save').addEventListener('click', saveSettings);
+  document.getElementById('btn-export').addEventListener('click', exportData);
+  document.getElementById('btn-import').addEventListener('change', e => {
+    if (e.target.files[0]) importData(e.target.files[0]);
+    e.target.value = '';
+  });
+  document.getElementById('btn-clear-data').addEventListener('click', clearAllData);
+
+  // Mini calendar nav
+  document.getElementById('mini-prev').addEventListener('click', () => {
+    miniDate.setMonth(miniDate.getMonth() - 1);
+    renderMini();
+  });
+  document.getElementById('mini-next').addEventListener('click', () => {
+    miniDate.setMonth(miniDate.getMonth() + 1);
+    renderMini();
+  });
+
+  // Video status filters
+  document.querySelectorAll('.video-filter').forEach(cb => {
+    cb.addEventListener('change', () => {
+      state.videoFilters[cb.value] = cb.checked;
+      renderCalendar();
+    });
+  });
+
+  // Close modal on overlay click
+  document.getElementById('event-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeEventModal();
+  });
+  document.getElementById('settings-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeSettings();
+  });
+
+  // Close popup on outside click
+  document.addEventListener('click', e => {
+    const popup = document.getElementById('day-popup');
+    if (!popup.classList.contains('hidden') && !popup.contains(e.target)) {
+      closeDayPopup();
+    }
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeEventModal();
+      closeSettings();
+      closeDayPopup();
+    }
+    if (e.key === 'Enter' && document.activeElement?.id === 'ev-title') {
+      // Allow default form behavior
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════
+function seedSchedule() {
+  const alreadyV3 = localStorage.getItem('stocksalon_seeded_v3');
+  const hadV2 = localStorage.getItem('stocksalon_seeded_v2');
+
+  // 野中担当（開発系）— 全タスク
+  const nonakaTasks = [
+    { title: '野中: チャット返信文ツール開発', date: '2026-02-28', type: 'content', assignee: 'nonaka' },
+    { title: '野中: 会員管理・決済システム構築', date: '2026-03-02', type: 'content', assignee: 'nonaka' },
+    { title: '野中: 会員サイト構築', date: '2026-03-04', type: 'content', assignee: 'nonaka' },
+    { title: '野中: 会員サイトとLINE連携', date: '2026-03-05', type: 'content', assignee: 'nonaka' },
+    { title: '野中: 配布導線構築', date: '2026-03-05', type: 'content', assignee: 'nonaka' },
+    { title: '野中: 会員サイト内コンテンツ配置', date: '2026-03-06', type: 'content', assignee: 'nonaka' },
+    { title: '野中: 銘柄分析AIツール構築', date: '2026-03-08', type: 'content', assignee: 'nonaka' },
+    { title: '野中: オンデマンド基本体制', date: '2026-03-09', type: 'content', assignee: 'nonaka' },
+    { title: '野中: KPI計測設定', date: '2026-03-09', type: 'content', assignee: 'nonaka' },
+    { title: '野中: Discord運営強化', date: '2026-03-09', type: 'content', assignee: 'nonaka' },
+  ];
+  // 小谷担当（開発不要）— 全タスク（完了・残り両方）
+  const kotaniTasks = [
+    { title: '小谷: 特典コンテンツ作成', date: '2026-02-28', type: 'content', assignee: 'kotani' },
+    { title: '小谷: スタッフ採用（2-3名）', date: '2026-02-28', type: 'shift', assignee: 'kotani' },
+    { title: '小谷: Discord構築', date: '2026-03-04', type: 'content', assignee: 'kotani' },
+    { title: '小谷: オンボーディング設計', date: '2026-03-04', type: 'content', assignee: 'kotani' },
+    { title: '小谷: 配信体制設計', date: '2026-03-05', type: 'content', assignee: 'kotani' },
+    { title: '小谷: 市況まとめ体制', date: '2026-03-05', type: 'content', assignee: 'kotani' },
+    { title: '小谷: 質問対応体制', date: '2026-03-06', type: 'content', assignee: 'kotani' },
+    { title: '小谷: 勉強会初回準備', date: '2026-03-08', type: 'content', assignee: 'kotani' },
+    { title: '小谷: メルマガ配信体制', date: '2026-03-08', type: 'content', assignee: 'kotani' },
+    { title: '小谷: 講座責任者オンボーディング', date: '2026-03-09', type: 'content', assignee: 'kotani' },
+    { title: '小谷: サロンルール・ガイドライン', date: '2026-03-09', type: 'content', assignee: 'kotani' },
+    { title: '小谷: オフ会・交流（低優先）', date: '2026-03-09', type: 'content', assignee: 'kotani' },
+    { title: '小谷: KPIレポート（低優先）', date: '2026-03-09', type: 'content', assignee: 'kotani' },
+    { title: '小谷: エンゲージメント施策（低優先）', date: '2026-03-09', type: 'content', assignee: 'kotani' },
+  ];
+
+  if (alreadyV3) return;
+
+  // 新規：マイルストーン＋メルマガ＋野中・小谷タスク。既にv2済みならタスクのみ追加（重複防止）
+  if (!hadV2) {
+    const seeds = [
+      { title: 'チャットサポートスタッフ2-3名採用完了', date: '2026-03-08', type: 'shift', assignee: 'kotani', notes: '3/8までに完了' },
+      { title: 'スタッフ研修', date: '2026-03-09', type: 'shift', assignee: 'kotani' },
+      { title: '特典動画 撮影完了', date: '2026-03-05', type: 'video', videoSubtype: 'filming', status: 'todo', assignee: 'kotani', notes: '3/5までに完了' },
+      { title: '特典動画3本 編集完了', date: '2026-03-09', type: 'video', videoSubtype: 'filming', status: 'todo', assignee: 'kotani', notes: '3/9までに完了' },
+      { title: '会員サイトに特典アップロード', date: '2026-03-10', type: 'content', assignee: 'nonaka', notes: '3/10までに完了' },
+    ];
+    for (let d = 11; d <= 31; d++) {
+      seeds.push({ title: 'メルマガ配信', date: `2026-03-${String(d).padStart(2, '0')}`, type: 'newsletter', assignee: 'kotani' });
+    }
+    [...seeds, ...nonakaTasks, ...kotaniTasks].forEach(e => createEvent(e));
+  } else {
+    [...nonakaTasks, ...kotaniTasks].forEach(e => createEvent(e));
+  }
+  localStorage.setItem('stocksalon_seeded_v2', '1');
+  localStorage.setItem('stocksalon_seeded_v3', '1');
+}
+
+function init() {
+  loadData();
+  miniDate = new Date(state.current);
+  renderMonthHeaders();
+  renderLegend();
+  renderAssigneeLegend();
+  seedSchedule();
+  renderCalendar();
+  bindEvents();
+  initGoogleClient();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
