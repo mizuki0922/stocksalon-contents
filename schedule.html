@@ -2106,11 +2106,13 @@ function seedSchedule() {
   localStorage.setItem('stocksalon_seeded_v2', '1');
   localStorage.setItem('stocksalon_seeded_v3', '1');
 
-  // v4: あいさんのタスク追加
+  // v4: あいさん・酒井さんのタスク追加
   if (!localStorage.getItem('stocksalon_seeded_v4')) {
     [
       { title: 'あい: 特典動画 撮影①', date: '2026-03-05', type: 'video', videoSubtype: 'filming', status: 'todo', assignee: 'ai', notes: '3/5までに完了（残り2本）' },
       { title: 'あい: 特典動画 撮影②', date: '2026-03-05', type: 'video', videoSubtype: 'filming', status: 'todo', assignee: 'ai', notes: '3/5までに完了（残り2本）' },
+      { title: '酒井: 特典動画 台本作成①', date: '2026-03-02', type: 'video', videoSubtype: 'script', status: 'todo', assignee: 'sakai', notes: '3/2までに完了' },
+      { title: '酒井: 特典動画 台本作成②', date: '2026-03-03', type: 'video', videoSubtype: 'script', status: 'todo', assignee: 'sakai', notes: '3/3までに完了' },
     ].forEach(e => createEvent(e));
     localStorage.setItem('stocksalon_seeded_v4', '1');
   }
