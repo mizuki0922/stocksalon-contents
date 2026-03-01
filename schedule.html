@@ -1186,7 +1186,6 @@ function makeChip(ev) {
   }
   if (ev.googleEventId) html += `<span class="google-indicator" title="Google Calendar"></span>`;
   div.innerHTML = html;
-  div.addEventListener('click', e => { e.stopPropagation(); openEditModal(ev.id); });
   return div;
 }
 
@@ -1250,9 +1249,10 @@ function renderMonth() {
     const dayEvs = (evMap[ymd] || []).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
     dayEvs.forEach(ev => cell.appendChild(makeChip(ev)));
 
-    // Click on empty area
+    // Click: chip → edit, empty → add
     cell.addEventListener('click', (e) => {
-      if (e.target.closest('.event-chip')) return;
+      const chip = e.target.closest('.event-chip');
+      if (chip) { openEditModal(chip.dataset.evId); return; }
       openAddModal(ymd);
     });
 
@@ -1296,7 +1296,11 @@ function renderWeek() {
       chip.style.fontSize = '0.7rem';
       cell.appendChild(chip);
     });
-    cell.addEventListener('click', () => openAddModal(ymd));
+    cell.addEventListener('click', (e) => {
+      const chip = e.target.closest('.event-chip');
+      if (chip) { openEditModal(chip.dataset.evId); return; }
+      openAddModal(ymd);
+    });
     alldayRow.appendChild(cell);
   });
 
