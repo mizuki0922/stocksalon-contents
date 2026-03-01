@@ -358,8 +358,16 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      min-width: 560px;
     }
+    #week-h-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+    .week-allday-row, .week-header, .week-body { min-width: 560px; }
     .week-header {
       display: grid;
       grid-template-columns: 56px repeat(7, minmax(72px, 1fr));
@@ -925,9 +933,11 @@
     </div>
     <!-- Week View -->
     <div id="week-view" class="hidden">
-      <div class="week-allday-row" id="week-allday-row"></div>
-      <div class="week-header" id="week-header"></div>
-      <div class="week-body" id="week-body"></div>
+      <div id="week-h-scroll">
+        <div class="week-allday-row" id="week-allday-row"></div>
+        <div class="week-header" id="week-header"></div>
+        <div class="week-body" id="week-body"></div>
+      </div>
     </div>
     <!-- List View -->
     <div id="list-view" class="hidden"></div>
