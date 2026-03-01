@@ -248,6 +248,7 @@
       flex: 1;
       overflow: auto;
       padding: 1rem;
+      min-width: 0;
     }
 
     /* Month View */
@@ -354,10 +355,10 @@
       border-radius: var(--radius);
       border: 1px solid var(--border);
       box-shadow: var(--shadow);
-      overflow-x: auto;
-      overflow-y: visible;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
+      min-width: 560px;
     }
     .week-header {
       display: grid;
