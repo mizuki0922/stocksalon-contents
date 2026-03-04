@@ -2304,6 +2304,24 @@ function seedSchedule() {
     localStorage.setItem('stocksalon_seeded_v4', '1');
   }
 
+  // v5: オンライン勉強会（第3土曜 14:00〜15:30）＋テーマ
+  if (!localStorage.getItem('stocksalon_seeded_v5')) {
+    const studyEvents = [
+      { title: '勉強会：基礎③ 売買タイミング', date: '2026-03-21', type: 'content', assignee: 'kotani', startTime: '14:00', endTime: '15:30', notes: 'Zoom 第3土曜 14:00〜15:30' },
+      { title: '勉強会：成長性の見極め方', date: '2026-04-18', type: 'content', assignee: 'kotani', startTime: '14:00', endTime: '15:30', notes: 'Zoom 第3土曜 14:00〜15:30（テーマ4）' },
+      { title: '勉強会：リスクの見極め方', date: '2026-05-16', type: 'content', assignee: 'kotani', startTime: '14:00', endTime: '15:30', notes: 'Zoom 第3土曜 14:00〜15:30（テーマ5）' },
+      { title: '勉強会：5ステップ統合実践', date: '2026-06-20', type: 'content', assignee: 'kotani', startTime: '14:00', endTime: '15:30', notes: 'Zoom 第3土曜 14:00〜15:30（テーマ6）' },
+      { title: '勉強会：テクニカル分析の基本（RSI・移動平均線）', date: '2026-07-18', type: 'content', assignee: 'kotani', startTime: '14:00', endTime: '15:30', notes: 'Zoom 第3土曜 14:00〜15:30（テーマ7）' },
+      { title: '勉強会：相場環境に応じた銘柄選定', date: '2026-08-15', type: 'content', assignee: 'kotani', startTime: '14:00', endTime: '15:30', notes: 'Zoom 第3土曜 14:00〜15:30（テーマ8）' },
+      { title: '勉強会：ポートフォリオ設計', date: '2026-09-19', type: 'content', assignee: 'kotani', startTime: '14:00', endTime: '15:30', notes: 'Zoom 第3土曜 14:00〜15:30（テーマ9）' },
+      { title: '勉強会：決算書の読み方（財務諸表の深掘り）', date: '2026-10-17', type: 'content', assignee: 'kotani', startTime: '14:00', endTime: '15:30', notes: 'Zoom 第3土曜 14:00〜15:30（テーマ10）' },
+      { title: '勉強会：業界分析（業界の動向を読む）', date: '2026-11-21', type: 'content', assignee: 'kotani', startTime: '14:00', endTime: '15:30', notes: 'Zoom 第3土曜 14:00〜15:30（テーマ11）' },
+      { title: '勉強会：年間振り返り・総合実践', date: '2026-12-19', type: 'content', assignee: 'kotani', startTime: '14:00', endTime: '15:30', notes: 'Zoom 第3土曜 14:00〜15:30（テーマ12）' },
+    ];
+    studyEvents.forEach(e => createEvent(e));
+    localStorage.setItem('stocksalon_seeded_v5', '1');
+  }
+
   const alreadyV3 = localStorage.getItem('stocksalon_seeded_v3');
   const hadV2 = localStorage.getItem('stocksalon_seeded_v2');
 
