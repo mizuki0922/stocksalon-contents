@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>スケジュール データリセット</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; max-width: 400px; line-height: 1.6; }
+    h1 { font-size: 1.1rem; margin-bottom: 1rem; }
+    p { margin: 0.5rem 0; color: #333; }
+    a { color: #2563eb; }
+    .btn { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; }
+    .btn:hover { background: #1d4ed8; }
+  </style>
+</head>
+<body>
+  <h1>データリセット</h1>
+  <p id="msg">リセットしています...</p>
+  <a href="schedule.html" id="link" class="btn" style="display:none;">スケジュールを開く</a>
+
+  <script>
+    (function() {
+      var done = false;
+      try {
+        for (var i = localStorage.length - 1; i >= 0; i--) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf('stocksalon') === 0) {
+            localStorage.removeItem(k);
+            done = true;
+          }
+        }
+      } catch (e) {}
+      var msg = document.getElementById('msg');
+      var link = document.getElementById('link');
+      if (done) {
+        msg.textContent = '保存データを削除しました。下のボタンでスケジュールを開いてください。';
+      } else {
+        msg.textContent = '削除するデータはありませんでした。スケジュールを開いてください。';
+      }
+      link.style.display = 'inline-block';
+      setTimeout(function() { location.href = 'schedule.html'; }, 1500);
+    })();
+  </script>
+</body>
+</html>

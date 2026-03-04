@@ -870,7 +870,7 @@
 <body>
 
 <!-- クリックできなくなったとき用：このリンクだけ常に最前面 -->
-<a href="schedule.html?reset=1" id="reset-link" style="position:fixed;top:6px;right:6px;z-index:10001;font-size:0.7rem;color:var(--muted);background:var(--card);padding:4px 8px;border-radius:4px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,0.1);">データリセット</a>
+<a href="schedule-reset.html" id="reset-link" style="position:fixed;top:6px;right:6px;z-index:10001;font-size:0.7rem;color:var(--muted);background:var(--card);padding:4px 8px;border-radius:4px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,0.1);">データリセット</a>
 
 <!-- ===== Header ===== -->
 <header id="app-header">
@@ -1111,7 +1111,7 @@
           </label>
           <button class="btn btn-danger" id="btn-clear-data">全データ削除</button>
         </div>
-        <p style="margin-top:0.75rem;font-size:0.8rem;color:var(--muted);">ページがクリックできなくなった場合: <strong>schedule.html?reset=1</strong> を開くと保存データを削除して再読み込みします。<br>リセットできないときは、<strong>?reset=1</strong> のページで Ctrl+Shift+R（Macは Cmd+Shift+R）で強制再読み込みしてから再度お試しください。</p>
+        <p style="margin-top:0.75rem;font-size:0.8rem;color:var(--muted);">ページがクリックできなくなった場合: <strong><a href="schedule-reset.html" target="_blank">schedule-reset.html</a></strong> を開くと保存データを削除してからスケジュールに戻ります。</p>
       </div>
     </div>
     <div class="modal-footer">
