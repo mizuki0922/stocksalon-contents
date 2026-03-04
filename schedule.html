@@ -1163,12 +1163,14 @@ function loadData() {
     if (cfg) Object.assign(state.config, JSON.parse(cfg));
   } catch {}
   // 特典動画3本 編集完了を 3/19 → 3/9 に統一
-  const ev = state.events.find(e => e.title === '特典動画3本 編集完了');
-  if (ev && ev.date === '2026-03-19') {
-    ev.date = '2026-03-09';
-    ev.notes = '3/9までに完了';
-    saveEvents();
-  }
+  try {
+    const ev = state.events.find(e => e.title === '特典動画3本 編集完了');
+    if (ev && ev.date === '2026-03-19') {
+      ev.date = '2026-03-09';
+      ev.notes = '3/9までに完了';
+      saveEvents();
+    }
+  } catch (_) {}
 }
 
 function saveEvents() {
@@ -2271,7 +2273,7 @@ function bindEvents() {
   // Close popup on outside click
   document.addEventListener('click', e => {
     const popup = document.getElementById('day-popup');
-    if (!popup.classList.contains('hidden') && !popup.contains(e.target)) {
+    if (popup && !popup.classList.contains('hidden') && !popup.contains(e.target)) {
       closeDayPopup();
     }
   });
@@ -2379,13 +2381,21 @@ function seedSchedule() {
 }
 
 function init() {
-  loadData();
-  miniDate = new Date(state.current);
-  renderMonthHeaders();
-  renderLegend();
-  renderAssigneeLegend();
-  seedSchedule();
-  renderCalendar();
+  try {
+    loadData();
+    miniDate = new Date(state.current);
+    renderMonthHeaders();
+    renderLegend();
+    renderAssigneeLegend();
+    seedSchedule();
+    renderCalendar();
+  } catch (err) {
+    console.error('Init error:', err);
+    try {
+      const msg = (err && err.message) ? err.message : String(err);
+      showToast('読み込みエラー: ' + msg + ' 再読み込みするか設定からデータを確認してください。', 'error', 8000);
+    } catch (_) {}
+  }
   bindEvents();
   initGoogleClient();
 }
