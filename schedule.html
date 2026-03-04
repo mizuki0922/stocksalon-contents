@@ -1093,6 +1093,7 @@
           </label>
           <button class="btn btn-danger" id="btn-clear-data">全データ削除</button>
         </div>
+        <p style="margin-top:0.75rem;font-size:0.8rem;color:var(--muted);">ページがクリックできなくなった場合: <strong>schedule.html?reset=1</strong> を開くと保存データを削除して再読み込みします。</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -1109,6 +1110,22 @@
 <div id="toast-container"></div>
 
 <script>
+// URL に ?reset=1 があるときは保存データをすべて削除してから再読み込み（クリックできなくなったとき用）
+(function() {
+  var m = /[?&]reset=1/.test(location.search);
+  if (m) {
+    try {
+      var keys = [];
+      for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+      keys.forEach(function(k) {
+        if (k && k.indexOf('stocksalon') === 0) localStorage.removeItem(k);
+      });
+    } catch (_) {}
+    location.replace(location.pathname);
+    return;
+  }
+})();
+
 // ════════════════════════════════════════════════════════
 //  CONSTANTS
 // ════════════════════════════════════════════════════════
